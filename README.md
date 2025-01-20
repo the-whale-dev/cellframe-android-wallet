@@ -1,4 +1,4 @@
-This is a new [**React Native**](https://reactnative.dev) project, bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
+<h1 style="color:red;">⚠️ WARNING: This project is under development!</h1>
 
 # Getting Started
 
@@ -33,14 +33,7 @@ yarn android
 ```
 
 ### For iOS
-
-```bash
-# using npm
-npm run ios
-
-# OR using Yarn
-yarn ios
-```
+iOS does not have the required libraries built to handle Cellframe functions and therefore does not have a working build
 
 If everything is set up _correctly_, you should see your new app running in your _Android Emulator_ or _iOS Simulator_ shortly provided you have set up your emulator/simulator correctly.
 
