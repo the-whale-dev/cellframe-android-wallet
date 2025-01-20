@@ -61,6 +61,7 @@ const KEL_Icon = require(`./assets/KEL.png`);
 const BNB_Icon = require(`./assets/BNB.png`);
 const USDT_Icon = require(`./assets/USDT.png`);
 const USDC_Icon = require(`./assets/USDC.png`);
+const NYS_Icon = require(`./assets/NYS.jpeg`);
 
 type Props = NativeStackScreenProps<RootStackParamList, 'App'>;
 
@@ -897,6 +898,7 @@ function App({ navigation, route }: Props): React.JSX.Element
       case "BNB": return BNB_Icon;
       case "USDT": return USDT_Icon;
       case "USDC": return USDC_Icon;
+      case "NYS": return NYS_Icon;
       default: return CELL_Icon;
     } 
   }
@@ -911,7 +913,7 @@ function App({ navigation, route }: Props): React.JSX.Element
       value: 'cell',
       icon: () => (
         <Image source={getIcon("CELL")}
-        style={{ width: 30, height: 30, marginRight: 10 }} />
+        style={{ width: 30, height: 30, marginRight: 10, borderRadius: 320 }} />
       ),
     },
     {
@@ -919,7 +921,7 @@ function App({ navigation, route }: Props): React.JSX.Element
       value: 'kel',
       icon: () => (
         <Image source={getIcon("KEL")}
-        style={{ width: 30, height: 30, marginRight: 10 }} />
+        style={{ width: 30, height: 30, marginRight: 10, borderRadius: 320 }} />
       ),
     }
   ]);
@@ -935,7 +937,7 @@ function App({ navigation, route }: Props): React.JSX.Element
         value: x.ticker.toLowerCase(), 
         icon: () => 
         (
-          <Image source={getIcon(x.ticker)} style={{ width: 30, height: 30, marginRight: 10 }} />
+          <Image source={getIcon(x.ticker)} style={{ width: 30, height: 30, marginRight: 10, borderRadius: 320 }} />
         )
       }
     )));
@@ -1276,11 +1278,11 @@ function App({ navigation, route }: Props): React.JSX.Element
               balances.length === 0
               ?
               <View style={{flexDirection: 'row', alignItems: 'center', justifyContent: 'center', height: 'auto'}}>
-                <Image source={getIcon(networks.find((x) => x.name === activeNetwork)!.ticker)} style={{ height: 12, aspectRatio: '1/1', objectFit: 'contain' }} />
+                <Image source={getIcon(networks.find((x) => x.name === activeNetwork)!.ticker)} style={{ height: 12, aspectRatio: '1/1', objectFit: 'contain', borderRadius: 320 }} />
                 <Text style={{color: 'white', fontSize: 24 }}>0</Text>
               </View>
               :
-              balances.map((x) => x.amount === 0 ? null : <View key={x.ticker} style={{flexDirection: 'row', alignItems: 'center', justifyContent: 'center', height: 'auto'}}><Image source={getIcon(x.ticker)} style={{ height: 12, aspectRatio: '1/1', objectFit: 'contain' }} /><Text style={{color: 'white', fontSize: 24 }}>{x.amount}</Text></View>)
+              balances.map((x) => x.amount === 0 ? null : <View key={x.ticker} style={{flexDirection: 'row', alignItems: 'center', justifyContent: 'center', height: 'auto'}}><Image source={getIcon(x.ticker)} style={{ height: 12, aspectRatio: '1/1', objectFit: 'contain', borderRadius: 320 }} /><Text style={{color: 'white', fontSize: 24 }}>{x.amount}</Text></View>)
             }
           </View>
           :
