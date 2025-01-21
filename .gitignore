@@ -36,6 +36,8 @@ local.properties
 
 android/build/
 android/app/build/
+android/app/my-release-key.jks
+android/app/build.gradle
 
 # node.js
 #

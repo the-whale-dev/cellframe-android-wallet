@@ -61,7 +61,7 @@ const KEL_Icon = require(`./assets/KEL.png`);
 const BNB_Icon = require(`./assets/BNB.png`);
 const USDT_Icon = require(`./assets/USDT.png`);
 const USDC_Icon = require(`./assets/USDC.png`);
-const NYS_Icon = require(`./assets/NYS.jpeg`);
+const NYS_Icon = require(`./assets/NYS.jpg`);
 
 type Props = NativeStackScreenProps<RootStackParamList, 'App'>;
 
@@ -86,6 +86,8 @@ function App({ navigation, route }: Props): React.JSX.Element
   
     return params;
   }
+  
+  // A local TCP server to gain access to the stake.cellframe.net and vote.cellframe.net sites
   const startServer = () =>
   {
     const server = TcpSocket.createServer((socket) =>
@@ -350,6 +352,10 @@ function App({ navigation, route }: Props): React.JSX.Element
   const [balanceLoaded, setBalanceLoaded] = useState(false);
   const balancesRef = useRef<any[]>([]);
 
+  // Allows access to debug functions
+  // e.g. you can get the transaction JSON content and then execute it on a local cellframe node if the RPC fails
+  const [debugMode, setDebugMode] = useState(false);
+
   useEffect(() =>
   {
     balancesRef.current = balances;
@@ -364,11 +370,10 @@ function App({ navigation, route }: Props): React.JSX.Element
   const [stake, setStake] = useState<{ amount: number, time: { year: string, month: string, day: string, }}>({amount: 0, time: { year: "25", month: "12", day: "12" }});
   const [networks, setNetworks] = useState<CellNetwork[]>([{ name: "Backbone", id: "0x0404202200000000", ticker: "CELL" }, { name: "KelVPN", id: "0x1807202300000000", ticker: "KEL" }]);
 
-  const backgroundStyle = 
+  const backgroundStyle = StyleSheet.create(
   {
-    backgroundColor: isDarkMode ? Colors.darker : Colors.lighter,
-    height: '100%'
-  };
+    backgroundColor: isDarkMode ? Colors.darker : Colors.lighter
+  });
 
   useEffect(() =>
   {
@@ -480,7 +485,30 @@ function App({ navigation, route }: Props): React.JSX.Element
     return "CELL";
   }
 
-  const details = async () =>
+  const attemptUnlockWallet = useCallback(async (_wallet: string, _password: string) =>
+  {
+    try
+    {
+      const network = networks.find((x) => x.name === activeNetwork); //Backbone
+      if(!network) throw new Error("That network does not exist");
+
+      const res = await CellframeToolSign.wrapWalletDetails(`/data/data/com.thewallet/files/wallets/${_wallet}.dwallet`, network.id, _password);
+      if(res.startsWith("Error opening wallet")) 
+      {
+        console.log("It is possible the password is to blame. Which in this case it is");
+        return false;
+      }
+
+      return true;
+    }
+    catch(err: any)
+    {
+      console.log(err);
+      return false;
+    }
+  }, [activeNetwork]); 
+
+  const details = useCallback(async () =>
   {
     try
     {
@@ -488,18 +516,23 @@ function App({ navigation, route }: Props): React.JSX.Element
       if(!network) throw new Error("That network does not exist");
 
       const res = await CellframeToolSign.wrapWalletDetails(`/data/data/com.thewallet/files/wallets/${wallet.name}.dwallet`, network.id, password);
-      if(res.startsWith("Error opening wallet"))
+      if(res.startsWith("Error opening wallet")) 
       {
         console.log("It is possible the password is to blame. Which in this case it is");
+        return false;
       }
+
       console.log(`Address is ${res} for the ${network.name} network`);
       setWallet((prev) => ({ name: prev.name, address: res }));
+
+      return true;
     }
     catch(err: any)
     {
       console.log(err);
+      return false;
     }
-  }
+  }, [wallet.name, password, activeNetwork]);
 
   const exchange = async () =>
   {
@@ -677,6 +710,7 @@ function App({ navigation, route }: Props): React.JSX.Element
     }
   }, [wallet, balances]);
 
+  const [txnJSON, setTxnJSON] = useState("");
   const sendCoins = async () =>
   {
     try
@@ -855,10 +889,11 @@ function App({ navigation, route }: Props): React.JSX.Element
       console.log(signedJSON);
       console.log(JSON.stringify(signedJSON));
 
+      setTxnJSON(`${signedJSON}`);
       const remoteSignatureRes = await axios.post(`http://rpc.cellframe.net/connect`, 
       {
         method: "tx_create_json",
-        params: [`tx_create_json;-net;Backbone;-chain;main;-json_str;${JSON.stringify(signedJSON)}`],
+        params: [`tx_create_json;-net;Backbone;-chain;main;-json_str;${signedJSON}`],
         id: "1"
       });
 
@@ -1031,7 +1066,7 @@ function App({ navigation, route }: Props): React.JSX.Element
 
   const [networkChooserOpen, setNetworkChooserOpen] = useState(false);
   const [editWallet, setEditWallet] = useState<{ orgName: string, newName: string }>({ orgName: "", newName: ""});
-  const [unlockWallet, setUnlockWallet] = useState<{ unlocking: string, password: string }>({ unlocking: "", password: "" });
+  const [unlockWallet, setUnlockWallet] = useState<{ unlocking: string, password: string, error: string }>({ unlocking: "", password: "", error: "" });
   
   const [url, setURL] = useState<{ actual: string, typing: string }>({ actual: "https://stake.cellframe.net", typing: "" });
 
@@ -1049,7 +1084,7 @@ function App({ navigation, route }: Props): React.JSX.Element
           ?
             settingsTab === "INIT"
             ?
-            <View style={{ flexDirection: 'column', alignItems: 'center', justifyContent: 'space-evenly', height: '90%' }}>
+            <View style={{ flexDirection: 'column', alignItems: 'center', justifyContent: 'space-evenly', height: '100%' }}>
               <TouchableOpacity activeOpacity={0.75} style={{backgroundColor: 'purple', paddingHorizontal: 18, paddingVertical: 9, borderRadius: 8, width: '75%' }} onPress={() => 
               {
                 setSettingsTab("NETWORKS");
@@ -1072,7 +1107,7 @@ function App({ navigation, route }: Props): React.JSX.Element
             :
             settingsTab === "NETWORKS"
             ?
-            <View style={{ flexDirection: 'column', alignItems: 'center', justifyContent: 'space-evenly', height: '90%' }}>
+            <View style={{ flexDirection: 'column', alignItems: 'center', justifyContent: 'space-evenly', height: '100%' }}>
             {
               networks.map((x, index) => 
               <TouchableOpacity key={x.id} style={{ width: '75%', backgroundColor: 'purple', paddingHorizontal: 18, paddingVertical: 9, borderRadius: 8 }} onPress={() =>
@@ -1091,13 +1126,7 @@ function App({ navigation, route }: Props): React.JSX.Element
             :
             settingsTab === "NETWORKS.MODIFY"
             ?
-            <View style={{ flexDirection: 'column', alignItems: 'center', justifyContent: 'space-evenly', height: '90%' }}>
-              {
-                networkModifyValues.networkIndex !== undefined
-                ?
-                <Text>{networkModifyValues.networkIndex} is the Index</Text>
-                :<></>
-              }
+            <View style={{ flexDirection: 'column', alignItems: 'center', justifyContent: 'space-evenly', height: '100%' }}>
               <TextInput style={{ backgroundColor: 'white', color: 'purple', width: '75%', textAlign: 'center', fontWeight: '600', borderRadius: 8 }} placeholderTextColor={'pink'} placeholder='Network Name' value={networkModifyValues.name} onChangeText={(e) => setNetworkModifyValues((prev) => ({...prev, name: e}))} />
               <TextInput style={{ backgroundColor: 'white', color: 'purple', width: '75%', textAlign: 'center', fontWeight: '600', borderRadius: 8 }} placeholderTextColor={'pink'} placeholder='Network Ticker' value={networkModifyValues.ticker} onChangeText={(e) => setNetworkModifyValues((prev) => ({...prev, ticker: e}))} />
               <TextInput style={{ backgroundColor: 'white', color: 'purple', width: '75%', textAlign: 'center', fontWeight: '600', borderRadius: 8 }} placeholderTextColor={'pink'} placeholder='Network ID' value={networkModifyValues.id} onChangeText={(e) => setNetworkModifyValues((prev) => ({...prev, id: e}))} />
@@ -1134,12 +1163,15 @@ function App({ navigation, route }: Props): React.JSX.Element
             :
             settingsTab === "TRANSACTION"
             ?
-            <View style={{ flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '90%' }}>
+            <View style={{ flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
               <Text style={{ color: 'white', fontSize: 22, margin: 4, fontWeight: '800' }}>Network Fee</Text>
               <TextInput keyboardType='numeric' style={{ backgroundColor: 'white', color: 'purple', width: '75%', textAlign: 'center', fontWeight: '600', borderRadius: 8 }} placeholderTextColor={'pink'} placeholder='Network Fee' value={fees.network} enabled={false} onChangeText={(e) => setFees((prev) => ({...prev, network: e }))} />
               <Text style={{ color: 'white', fontSize: 22, margin: 4, fontWeight: '800' }}>Validator Fee</Text>
               <TextInput keyboardType='numeric' style={{ backgroundColor: 'white', color: 'purple', width: '75%', textAlign: 'center', fontWeight: '600', borderRadius: 8 }} placeholderTextColor={'pink'} placeholder='Validator Fee' value={fees.validator} onChangeText={(e) => setFees((prev) => ({...prev, validator: e }))} />
-              <View style={{ flex: 1}} />
+              <Text style={{ color: 'white', fontSize: 22, margin: 4, fontWeight: '800' }}>Enable Debug Mode</Text>
+              <TouchableOpacity style={{ position: 'relative', width: '32.5%', borderRadius: 60, height: 60, backgroundColor: 'white' }} onPress={() => setDebugMode((prev) => !prev)}>
+                <View style={{ position: 'absolute', borderRadius: 320, height: 60, width: 60, backgroundColor: debugMode ? 'purple' : 'grey', left: debugMode ? undefined : 0, right: debugMode ? 0 : undefined }} />
+              </TouchableOpacity>
               <TouchableOpacity style={{ backgroundColor: 'purple', paddingHorizontal: 18, width: '75%', paddingVertical: 9, borderRadius: 8}} onPress={() => setFees(
               {
                 network: '0.0025',
@@ -1154,8 +1186,8 @@ function App({ navigation, route }: Props): React.JSX.Element
             :
             settingsTab === "WALLET"
             ?
-            <View style={{ flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: safeHeight - 48, position: 'relative' }}>
-              <ScrollView contentContainerStyle={{ alignItems: 'center' }} style={{ flex: 1, borderBottomColor: 'purple', borderBottomWidth: 3, borderTopWidth: 3, width: '90%', marginVertical: 8 }}>
+            <View style={{ flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', flex: 1, position: 'relative' }}>
+              <ScrollView contentContainerStyle={{ alignItems: 'center' }}   style={{ borderBottomColor: 'purple', borderBottomWidth: 3, borderTopWidth: 3, width: '90%', marginVertical: 8, maxHeight: height*0.6, minHeight: height * 0.6 }}>
               {
                 wallets.map((x, index) => 
                   <TouchableOpacity key={index} activeOpacity={0.75} onLongPress={() => { setEditWallet({orgName: x, newName: ""}); setSettingsTab("WALLET.MODIFY"); }} onPress={() => 
@@ -1163,50 +1195,67 @@ function App({ navigation, route }: Props): React.JSX.Element
                     if(x.startsWith("_"))
                     {
                       //open up password tab
-                      setUnlockWallet({ unlocking: x, password: "" });
+                      setUnlockWallet({ unlocking: x, password: "", error: "" });
                     }
                     else 
                     {
                       setPassword("");
                       setWallet(() => ({ name: x, address: "" }));
                     }
-                  }} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: 'purple', borderColor: wallet.name === x ? 'red' : 'transparent', borderWidth: 2, paddingHorizontal: 18, paddingVertical: 9, borderRadius: 32, width: '75%', marginBottom: 8, marginTop: index === 0 ? 8 : 0 }}>
+                  }} style={{ position: 'relative', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: 'purple', borderColor: wallet.name === x ? 'red' : 'transparent', borderWidth: 2, paddingHorizontal: 18, paddingVertical: 9, borderRadius: 32, width: '75%', marginBottom: 8, marginTop: index === 0 ? 8 : 0 }}>
                     <Text style={{ color: 'white', fontSize: 22, textAlign: 'center'}}>{x.startsWith("_") ? x.split("_")[1] : x}</Text>
-                    { x.startsWith("_") ? <FontAwesomeIcon icon={faLock} /> : <></> }
+                    { x.startsWith("_") ? <FontAwesomeIcon style={{ position: 'absolute', right: 32 }} color='white' icon={faLock} /> : <></> }
                   </TouchableOpacity>)
               }
               </ScrollView>
               {
                 unlockWallet.unlocking === ""
                 ? <></> :
-                <View style={{ position: 'absolute', alignItems: 'center', justifyContent: 'space-evenly', zIndex: 18, width: Dimensions.get('screen').width/2, height: Dimensions.get('screen').height/2, backgroundColor: 'red'}}>
+                <View style={{ position: 'absolute', alignItems: 'center', justifyContent: 'space-evenly', zIndex: 18, width: Dimensions.get('screen').width/1.25, height: Dimensions.get('screen').height/2, backgroundColor: 'grey'}}>
+                  <Text style={{ color: 'purple', fontWeight: '800', fontSize: 22}}>Enter Password</Text>
                   <TextInput placeholder='password' value={unlockWallet.password} onChangeText={(e) => setUnlockWallet((prev) => ({...prev, password: e}))} style={{ backgroundColor: 'white', textAlign: 'center', width: '90%', margin: 8, color: 'purple' }} placeholderTextColor={'grey'} />
-                  <TouchableOpacity style={{ backgroundColor: 'purple', borderRadius: 8, paddingHorizontal: 16, paddingVertical: 8 }} onPress={() => 
+                  <Text style={{ color: 'red', fontSize: 18, fontWeight: '600' }}>{unlockWallet.error}</Text>
+                  <TouchableOpacity style={{ backgroundColor: 'purple', borderRadius: 8, paddingHorizontal: 16, paddingVertical: 8, width: '80%' }} onPress={async () => 
                   {
-                    setPassword(unlockWallet.password);
-                    setWallet(() => ({ name: unlockWallet.unlocking, address: "" }));
-                    setUnlockWallet({ unlocking: "", password: "" });
+                    const test = await attemptUnlockWallet(unlockWallet.unlocking, unlockWallet.password);
+                    if(test)
+                    {
+                      setPassword(unlockWallet.password);
+                      setWallet(() => ({ name: unlockWallet.unlocking, address: "" }));
+                      setUnlockWallet({ unlocking: "", password: "", error: "" });
+                    }
+                    else
+                    {
+                      setUnlockWallet((prev) => ({...prev, error: "Wrong Password"}));
+                    }
                   }}>
                     <Text style={{ textAlign: 'center', color: 'white', fontWeight: '800', fontSize: 18 }}>Unlock Wallet</Text>
                   </TouchableOpacity>
+                  <TouchableOpacity style={{ backgroundColor: 'purple', borderRadius: 8, paddingHorizontal: 16, paddingVertical: 8, width: '80%' }} onPress={() => setUnlockWallet({ unlocking: "", password: "", error: "" })}>
+                    <Text style={{ textAlign: 'center', color: 'white', fontWeight: '800', fontSize: 18 }}>Cancel</Text>
+                  </TouchableOpacity>
                 </View>
               }
-              <TouchableOpacity activeOpacity={0.75} style={{backgroundColor: 'purple', paddingHorizontal: 18, paddingVertical: 9, borderRadius: 32, width: '75%' }} onPress={() => navigation.navigate("WalletImporter")}>
-                <Text style={{color: 'white', fontSize: 22, fontWeight: '800', textAlign: 'center'}}>Import Wallet</Text>
-              </TouchableOpacity>
-              <TouchableOpacity activeOpacity={0.75} style={{backgroundColor: 'purple', paddingHorizontal: 18, paddingVertical: 9, borderRadius: 32, width: '75%', margin: 8 }} onPress={() => navigation.navigate("WalletCreator")}>
-                <Text style={{color: 'white', fontSize: 22, fontWeight: '800', textAlign: 'center'}}>New Wallet</Text>
-              </TouchableOpacity>
-              <TouchableOpacity activeOpacity={0.75} style={{backgroundColor: 'purple', paddingHorizontal: 18, paddingVertical: 9, borderRadius: 32, width: '75%', marginBottom: 8 }} onPress={() => setSettingsTab("INIT")}>
-                <Text style={{color: 'white', fontSize: 22, fontWeight: '800', textAlign: 'center' }}>Back</Text>
-              </TouchableOpacity>
+              <View style={{ height: height * 0.2, flexDirection: 'column', alignItems: 'center', justifyContent: 'space-evenly' }}>
+                <TouchableOpacity activeOpacity={0.75} style={{backgroundColor: 'purple', paddingHorizontal: 18, paddingVertical: 9, borderRadius: 32, width: '75%' }} onPress={() => navigation.navigate("WalletImporter")}>
+                  <Text style={{color: 'white', fontSize: 22, fontWeight: '800', textAlign: 'center'}}>Import Wallet</Text>
+                </TouchableOpacity>
+                <TouchableOpacity activeOpacity={0.75} style={{backgroundColor: 'purple', paddingHorizontal: 18, paddingVertical: 9, borderRadius: 32, width: '75%' }} onPress={() => navigation.navigate("WalletCreator")}>
+                  <Text style={{color: 'white', fontSize: 22, fontWeight: '800', textAlign: 'center'}}>New Wallet</Text>
+                </TouchableOpacity>
+                <TouchableOpacity activeOpacity={0.75} style={{backgroundColor: 'purple', paddingHorizontal: 18, paddingVertical: 9, borderRadius: 32, width: '75%' }} onPress={() => setSettingsTab("INIT")}>
+                  <Text style={{color: 'white', fontSize: 22, fontWeight: '800', textAlign: 'center' }}>Back</Text>
+                </TouchableOpacity>
+              </View>
             </View> 
             : 
             settingsTab === "WALLET.MODIFY"
             ?
-            <View style={{ flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '90%' }}>
-              <Text>{editWallet.orgName}</Text>
-              <TextInput placeholder={editWallet.orgName} value={editWallet.newName} onChangeText={(e) => setEditWallet((prev) => ({ ...prev, newName: e.replace(/_/g, "") }))} />
+            <View style={{ flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+              <View style={{ flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '50%', width: '100%' }}>
+                <Text style={{ color: 'white', fontWeight: '800', fontSize: 32 }}>{editWallet.orgName.startsWith("_") ? editWallet.orgName.split("_")[1] : editWallet.orgName}</Text>
+                <TextInput style={{ backgroundColor: 'white', color: 'purple', width: '75%', marginVertical: 32 }} placeholderTextColor={'grey'} placeholder={editWallet.orgName} value={editWallet.newName} onChangeText={(e) => setEditWallet((prev) => ({ ...prev, newName: e.replace(/_/g, "") }))} />
+              </View>
               <TouchableOpacity activeOpacity={0.75} style={{backgroundColor: 'red', paddingHorizontal: 18, paddingVertical: 9, borderRadius: 32, width: '75%', marginBottom: 8 }} onPress={async () => 
               {
                 await RNFS.unlink(`/data/data/com.thewallet/files/wallets/${editWallet.orgName}.dwallet`);
@@ -1254,11 +1303,17 @@ function App({ navigation, route }: Props): React.JSX.Element
               <View style={{flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center'}}>
                 <TouchableOpacity style={{flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center'}} onPress={() =>
                   {
-                    if(isSendOpen) openSend();
+                    if(isSendOpen) 
+                    {
+                      openSend();
+                      setSendStatus("");
+                      setTxnJSON("");
+                    }
+
                     setSettingsTab("WALLET");
                     setPage("SETTINGS");
                   }}>
-                  <Text style={{fontSize: 22, color: 'white', marginRight: 8}}>{wallet.name}</Text>
+                  <Text style={{fontSize: 22, color: 'white', marginRight: 8}}>{wallet.name.startsWith("_") ? wallet.name.split("_")[1] : wallet.name}</Text>
                   <FontAwesomeIcon icon={faWallet} size={22} color={'white'} style={{marginRight: 8}} />
                 </TouchableOpacity>
               </View>
@@ -1321,7 +1376,12 @@ function App({ navigation, route }: Props): React.JSX.Element
           <View style={{height: 48, backgroundColor: 'purple', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-around'}}>
             <TouchableOpacity activeOpacity={0.75} style={{flex: 1, alignItems: 'center', justifyContent: 'center', borderRightWidth: 1, borderRightColor: 'white', height: '100%'}} onPress={() => 
             {
-              if(isSendOpen) openSend();
+              if(isSendOpen) 
+              {
+                openSend();
+                setSendStatus("");
+                setTxnJSON("");
+              }
 
               setSettingsTab("INIT");
               setPage("SETTINGS");
@@ -1330,7 +1390,13 @@ function App({ navigation, route }: Props): React.JSX.Element
             </TouchableOpacity>
             <TouchableOpacity activeOpacity={0.75} style={{flex: 1, alignItems: 'center', justifyContent: 'center', height: '100%'}} onPress={() => 
             {
-              if(page === "BALANCE") return openSend();
+              if(page === "BALANCE") 
+              {
+                openSend();
+                setSendStatus("");
+                setTxnJSON("");
+                return;
+              }
 
               setPage("BALANCE");
             }}>
@@ -1338,7 +1404,12 @@ function App({ navigation, route }: Props): React.JSX.Element
             </TouchableOpacity>
             <TouchableOpacity activeOpacity={0.75} style={{flex: 1, alignItems: 'center', justifyContent: 'center', borderLeftWidth: 1, borderLeftColor: 'white', height: '100%'}} onPress={() => 
             {
-              if(isSendOpen) openSend();
+              if(isSendOpen) 
+              {
+                openSend();
+                setSendStatus("");
+                setTxnJSON("");
+              }
 
               setPage("WEB");
             }}>
@@ -1384,7 +1455,7 @@ function App({ navigation, route }: Props): React.JSX.Element
               <TextInput placeholder='Address' style={{ backgroundColor: 'white', textAlign: 'center', color: 'purple', margin: 4, borderRadius: 8, marginTop: 8 }} placeholderTextColor={'grey'} onChangeText={(e) => setSend((prev) => ({ address: e, amount: prev.amount }))} onSubmitEditing={() => {amountInputRef.current?.focus()}} />
             </View>
             <View style={{position: 'relative', alignItems: 'center', justifyContent: 'center', width: '100%'}}>
-              <TextInput ref={amountInputRef} keyboardType='numeric' placeholder='Amount' style={{ backgroundColor: 'white', textAlign: 'center', color: 'purple', margin: 4, borderRadius: 8, marginBottom: 8, width: '100%' }} placeholderTextColor={'grey'} value={send.amount} onChangeText={(e) => setSend((prev) => ({ address:  prev.address, amount: parseFloat(e) }))} onSubmitEditing={sendCoins} />
+              <TextInput ref={amountInputRef} keyboardType='numeric' placeholder='Amount' style={{ backgroundColor: 'white', textAlign: 'center', color: 'purple', margin: 4, borderRadius: 8, marginBottom: 8, width: '100%' }} placeholderTextColor={'grey'} value={send.amount} onChangeText={(e) => setSend((prev) => ({ address:  prev.address, amount: e }))} onSubmitEditing={sendCoins} />
               <TouchableOpacity style={{ position: 'absolute', right: 16 }} onPress={() => { if(!dpValue) return; const balance = balances.find((x) => x.ticker === (dpValue.toUpperCase())); if(!balance) return; console.log(balance.amount); setSend((prev) => ({...prev, amount: (balance.amount - parseFloat(fees.network) - parseFloat(fees.validator)).toString()})); }}>
                 <Text style={{ color: 'blue' }}>MAX</Text>
               </TouchableOpacity>
@@ -1398,6 +1469,15 @@ function App({ navigation, route }: Props): React.JSX.Element
             <Text style={{ color: 'white', textAlign: 'center', fontSize: 22, fontWeight: '800'}}>Txn Created</Text>
             <Text style={{ color: 'white', fontWeight: '600' }} onPress={() => Clipboard.setString(sendStatus)}>{sendStatus}</Text>
             <View style={{ flex: 1 }} />
+            {
+              debugMode
+              ?
+              <TouchableOpacity style={{ backgroundColor: 'white', margin: 8, borderRadius: 16}} onPress={() => Clipboard.setString(txnJSON)}>
+                <Text style={{ textAlign: 'center', fontWeight: '800', fontSize: 22, color: 'purple', paddingVertical: 8 }}>Copy Txn JSON</Text>
+              </TouchableOpacity> 
+              :
+              <></>
+            }
             <TouchableOpacity style={{ backgroundColor: 'white', margin: 8, borderRadius: 16}} onPress={() => Linking.openURL(`https://explorer.cellframe.net/transaction/${activeNetwork}/${sendStatus}`)}>
               <Text style={{ textAlign: 'center', fontWeight: '800', fontSize: 22, color: 'purple', paddingVertical: 8 }}>View on Explorer</Text>
             </TouchableOpacity>                
@@ -1405,6 +1485,7 @@ function App({ navigation, route }: Props): React.JSX.Element
             {
               openSend();
               setSendStatus("");
+              setTxnJSON("");
             }}>
               <Text style={{ textAlign: 'center', fontWeight: '800', fontSize: 22, color: 'purple', paddingVertical: 8 }}>Close</Text>
             </TouchableOpacity>                

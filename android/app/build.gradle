@@ -7,7 +7,7 @@ apply plugin: "com.facebook.react"
  * By default you don't need to apply any configuration, just uncomment the lines you need.
  */
 project.ext.react = [
-    enableHermes: true
+    enableHermes: false
 ]
 
 
@@ -91,6 +91,12 @@ android {
         versionName "1.0"
     }
     signingConfigs {
+        release {
+            storeFile file('my-release-key.jks')
+            storePassword 'mynamejeff'
+            keyAlias 'my-key-alias'
+            keyPassword 'mynamejeff'
+        }
         debug {
             storeFile file('debug.keystore')
             storePassword 'android'
