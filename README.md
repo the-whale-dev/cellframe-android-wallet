@@ -1,7 +1,13 @@
-<h1>⚠️ This project is currently under development</h1>
-<h2>⚠️ Only the Backbone network is useable at the moment</h2>
-<h2>⚠️ There is no guarantee this project will be completed</h2>
-This project is a WIP and while the app does function correctly at most times it may not be suitable for casual use. There are certain bugs which may make for an uncomfortable experience for the average user. Issues can be found at the bottom of this README. UI is not final
+# 🚧 Quantum Wallet (Under Development)
+
+Welcome to the **Quantum Wallet**, the first Android wallet for the Backbone network! 🎉  
+
+⚠️ **Please Note:**
+- This project is currently in active development, and the UI is not final.
+- Only the **Backbone network** is supported at the moment.
+- While the app functions correctly in most cases, there are known issues that may affect usability. See [Current Issues](#current-issues) for details.
+
+We appreciate your patience and feedback as we work toward making this project more stable and feature-rich!
 
 ## App Layout
 <p align="center">
