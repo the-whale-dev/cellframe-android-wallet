@@ -4,71 +4,31 @@
 
 >**Note**: Make sure you have completed the [React Native - Environment Setup](https://reactnative.dev/docs/environment-setup) instructions till "Creating a new application" step, before proceeding.
 
-## Step 1: Start the Metro Server
+## Running Debug on Computer
 
-First, you will need to start **Metro**, the JavaScript _bundler_ that ships _with_ React Native.
+1) Install [Android Studio](https://developer.android.com/studio)
+2) Open Android Studio
+3) Click the 4 line toolbar button
+4) Click Tools
+5) Click SDK Manager
+6) In the centre you'll see "SDK Platforms", "SDK Tools" and "SDK Update Sites". Click "SDK Tools"
+7) Install the following
+   i) Android SDK
+   ii) NDK (Side by side)
+   iii) Android SDK Command-line Tools (latest)
+   iv) CMake
+   v) Android SDK Platform-Tools
+   vi) (Optional) Google USB Driver -> If you want to run on a physical Android device
+   vii) (Optional) Android Emulator -> If you want to run an Android emulator
+9) Once installed. Close all instances of command prompts/terminals (alternatively you can restart the computer)
+10) Clone the project
+11) If running a physical device make sure it's plugged in and USB terthering is enabled. You may need to enable developer tools on your phone which you can find out how to do for your device online
+12) Run "npm run start" in the parent folder
+13) Press "a" to open up the Android
 
-To start Metro, run the following command from the _root_ of your React Native project:
+## Building App Instance
 
-```bash
-# using npm
-npm start
 
-# OR using Yarn
-yarn start
-```
 
-## Step 2: Start your Application
-
-Let Metro Bundler run in its _own_ terminal. Open a _new_ terminal from the _root_ of your React Native project. Run the following command to start your _Android_ or _iOS_ app:
-
-### For Android
-
-```bash
-# using npm
-npm run android
-
-# OR using Yarn
-yarn android
-```
-
-### For iOS
-iOS does not have the required libraries built to handle Cellframe functions and therefore does not have a working build
-
-If everything is set up _correctly_, you should see your new app running in your _Android Emulator_ or _iOS Simulator_ shortly provided you have set up your emulator/simulator correctly.
-
-This is one way to run your app — you can also run it directly from within Android Studio and Xcode respectively.
-
-## Step 3: Modifying your App
-
-Now that you have successfully run the app, let's modify it.
-
-1. Open `App.tsx` in your text editor of choice and edit some lines.
-2. For **Android**: Press the <kbd>R</kbd> key twice or select **"Reload"** from the **Developer Menu** (<kbd>Ctrl</kbd> + <kbd>M</kbd> (on Window and Linux) or <kbd>Cmd ⌘</kbd> + <kbd>M</kbd> (on macOS)) to see your changes!
-
-   For **iOS**: Hit <kbd>Cmd ⌘</kbd> + <kbd>R</kbd> in your iOS Simulator to reload the app and see your changes!
-
-## Congratulations! :tada:
-
-You've successfully run and modified your React Native App. :partying_face:
-
-### Now what?
-
-- If you want to add this new React Native code to an existing application, check out the [Integration guide](https://reactnative.dev/docs/integration-with-existing-apps).
-- If you're curious to learn more about React Native, check out the [Introduction to React Native](https://reactnative.dev/docs/getting-started).
-
-# Troubleshooting
-
-If you can't get this to work, see the [Troubleshooting](https://reactnative.dev/docs/troubleshooting) page.
-
-# Learn More
-
-To learn more about React Native, take a look at the following resources:
-
-- [React Native Website](https://reactnative.dev) - learn more about React Native.
-- [Getting Started](https://reactnative.dev/docs/environment-setup) - an **overview** of React Native and how setup your environment.
-- [Learn the Basics](https://reactnative.dev/docs/getting-started) - a **guided tour** of the React Native **basics**.
-- [Blog](https://reactnative.dev/blog) - read the latest official React Native **Blog** posts.
-- [`@facebook/react-native`](https://github.com/facebook/react-native) - the Open Source; GitHub **repository** for React Native.
-
-[![Buy me a Lambo](https://img.shields.io/badge/Open-The%20Wallet-blue)](thewallet://donate)
+## Other Information
+This project uses a modified version of the demlabs [cellframe-tool-sign](https://gitlab.demlabs.net/cellframe/cellframe-tool-sign) project which has had JNI wrappers added so that it is functional with Android devices. You can see the modified code [here](https://github.com/the-whale-dev/cellframe-android-wallet-misc)
