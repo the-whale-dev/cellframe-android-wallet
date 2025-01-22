@@ -4,7 +4,7 @@ Welcome to the **Quantum Wallet**, the first Android wallet for the Backbone net
 
 ⚠️ **Please Note:**
 - This project is currently in active development, and the UI is not final.
-- Only the **Backbone network** is supported at the moment.
+- Only the **Backbone network** is fully supported at the moment. KelVPN is not supported by all RPC nodes and may require multiple attempts to complete a transaction.
 - While the app functions correctly in most cases, there are known issues that may affect usability. See [Current Issues](#current-issues) for details.
 
 We appreciate your patience and feedback as we work toward making this project more stable and feature-rich!
