@@ -14,13 +14,13 @@ This project is a WIP and is most likely not suitable for casual use. There are 
 5) Click SDK Manager
 6) In the centre you'll see "SDK Platforms", "SDK Tools" and "SDK Update Sites". Click "SDK Tools"
 7) Install the following
-   i) Android SDK
-   ii) NDK (Side by side)
-   iii) Android SDK Command-line Tools (latest)
-   iv) CMake
-   v) Android SDK Platform-Tools
-   vi) (Optional) Google USB Driver -> If you want to run on a physical Android device
-   vii) (Optional) Android Emulator -> If you want to run an Android emulator
+   - Android SDK
+   - NDK (Side by side)
+   - Android SDK Command-line Tools (latest)
+   - CMake
+   - Android SDK Platform-Tools
+   - (Optional) Google USB Driver -> If you want to run on a physical Android device
+   - (Optional) Android Emulator -> If you want to run an Android emulator
 9) Once installed. Close all instances of command prompts/terminals (alternatively you can restart the computer)
 10) Clone the project
 11) If running a physical device make sure it's plugged in and USB terthering is enabled. You may need to enable developer tools on your phone which you can find out how to do for your device online
