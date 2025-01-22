@@ -1,5 +1,11 @@
 <h1>⚠️ WARNING: This project is under development!</h1>
-This project is a WIP and is most likely not suitable for casual use. There are certain bugs which may make for an uncomfortable experience for the average user. Issues can be found at the bottom of this README
+<h2>⚠️ WARNING: Only the Backbone network is useable at the moment</h2>
+This project is a WIP and while the app does function correctly at most times it may not be suitable for casual use. There are certain bugs which may make for an uncomfortable experience for the average user. Issues can be found at the bottom of this README
+
+## App Layout
+<p align="center">
+   <img src="" alt="Init page of the wallet" width="200" />
+</p>
 
 ## Getting Started
 
