@@ -799,11 +799,6 @@ function App({ navigation, route }: Props): React.JSX.Element
   {
     try
     {
-      // Sending native coin definetly works but there is an issue with the json_str command or something
-      // Or maybe an issue on the RPC idk really. Weird how the first transaction worked but none after have
-      // If you need to 
-      // Latest wallet issue is that UTXOs is returning an empty array even though ti should return: hash: 0xAC7D5CAA123BEF3829B1B31E252CD6B6E704A1E0C11C2F4F60E3A0FA84EBFE22, index: 0
-      console.log("HELLO???");
       const amount = (parseFloat(send.amount)*(10**18));
       const network = networks.find((x) => x.name === activeNetwork);
       
@@ -817,7 +812,7 @@ function App({ navigation, route }: Props): React.JSX.Element
       if(dpValue!.toUpperCase() === network.ticker.toUpperCase())
       {
         //In the case that you are sending the native ticker
-        console.log("We are sending native tokens i.e. $CELL");
+        console.log("We are sending native tokens e.g. $CELL for Backbone");
         console.log(network.ticker.toUpperCase());
         console.log(activeNetwork);
         console.log(wallet.address);
@@ -836,6 +831,7 @@ function App({ navigation, route }: Props): React.JSX.Element
         console.log(`^^^^^^^^ These are the UTXOs ^^^^^^^^^^`);
         let usingUTXOs: any[] = [];
 
+        // Only using the minimum amount of UTXOs for the transaction 
         for(let i = 0; i < t_UTXOs.length; i++)
         {
           if(usingUTXOs.reduce((a, b) => a + b.value, 0) >= (amount + (parseFloat(fees.network)*(10**18)) + (parseFloat(fees.validator)*(10**18)))) break;
@@ -889,6 +885,9 @@ function App({ navigation, route }: Props): React.JSX.Element
       else
       {
         console.log("We are sending custom tokens e.g. $QEVM");
+
+        //We will retrieve the native token UTXOs to pay for validator fees
+        //And also get the UTXOs for the actual token being sent
         const nativeUTXOs = await axios.post(`${rpc === "" ? 'http://rpc.cellframe.net/connect' : rpc}`,
         {
           method: "wallet",
