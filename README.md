@@ -38,11 +38,12 @@ This project is a WIP and while the app does function correctly at most times it
 ## Building App Instance
 
 To build the app to run on your Android device without debugging tools you need to do the following:
-1) Open a command prompt and cd into {PROJECT}/android
-2) Run gradlew assembleRelease
-3) Wait for release .apk to get created
-4) Download/Move the app-release.apk from the {PROJECT}/android/app/build/outputs/app-release.apk to your Android device
-5) Install the .apk on your device by opening it on your device
+1) If on Windows clone or move the project to a folder so that it has the shortest possible path e.g. C:\X\
+2) Open a command prompt and cd into {PROJECT}/android
+3) Run gradlew assembleRelease
+4) Wait for release .apk to get created
+5) Download/Move the app-release.apk from the {PROJECT}/android/app/build/outputs/app-release.apk to your Android device
+6) Install the .apk on your device by opening it on your device
 
 ## Other Information
 This project uses a modified version of the demlabs [cellframe-tool-sign](https://gitlab.demlabs.net/cellframe/cellframe-tool-sign) project which has had JNI wrappers added so that it is functional with Android devices. You can see the modified code [here](https://github.com/the-whale-dev/cellframe-android-wallet-misc)
