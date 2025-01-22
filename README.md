@@ -1,4 +1,4 @@
-<h1 style="color:red;">⚠️ WARNING: This project is under development!</h1>
+<h1>⚠️ WARNING: This project is under development!</h1>
 
 # Getting Started
 
@@ -70,3 +70,5 @@ To learn more about React Native, take a look at the following resources:
 - [Learn the Basics](https://reactnative.dev/docs/getting-started) - a **guided tour** of the React Native **basics**.
 - [Blog](https://reactnative.dev/blog) - read the latest official React Native **Blog** posts.
 - [`@facebook/react-native`](https://github.com/facebook/react-native) - the Open Source; GitHub **repository** for React Native.
+
+<a href="https://www.google.com"><div style="background-color: green; color: white;"><span>Buy me a Lambo</span></div></a>
