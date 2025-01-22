@@ -15,6 +15,7 @@ We appreciate your patience and feedback as we work toward making this project m
    <img src="https://github.com/the-whale-dev/cellframe-android-wallet-imgs/blob/main/Screenshot_20250122_222843_Quantum%20Wallet.jpg" alt="Init page of the wallet" width="200" />
    <img src="https://github.com/the-whale-dev/cellframe-android-wallet-imgs/blob/main/Screenshot_20250122_223445_Quantum%20Wallet.jpg" alt="Init page of the wallet" width="200" />
    <img src="https://github.com/the-whale-dev/cellframe-android-wallet-imgs/blob/main/Screenshot_20250122_223458_Quantum%20Wallet.jpg" alt="Init page of the wallet" width="200" />
+   <img src="https://github.com/the-whale-dev/cellframe-android-wallet-imgs/blob/main/Screenshot_20250123_005115_Quantum%20Wallet.jpg" alt="Init page of the wallet" width="200" />
 </p>
 
 ## Getting Started
