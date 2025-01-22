@@ -54,6 +54,13 @@ To build the app to run on your Android device without debugging tools you need 
 5) Download/Move the app-release.apk from the {PROJECT}/android/app/build/outputs/app-release.apk to your Android device
 6) Install the .apk on your device by opening it on your device
 
+## TODO
+1) Create functioning staking transaction
+2) Create functioning MN delegating transaction
+3) Create functioning bridge transaction
+4) Complete ability to connect to cellframe sites such as stake.cellframe.net, vote.cellframe.net and bridge.cellframe.net using local TCP server
+5) Add repository for token details such as token icon ???
+
 ## Other Information
 This project uses a modified version of the demlabs [cellframe-tool-sign](https://gitlab.demlabs.net/cellframe/cellframe-tool-sign) project which has had JNI wrappers added so that it is functional with Android devices. You can see the modified code [here](https://github.com/the-whale-dev/cellframe-android-wallet-misc)
 
