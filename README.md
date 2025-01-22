@@ -39,5 +39,5 @@ To build the app to run on your Android device without debugging tools you need 
 This project uses a modified version of the demlabs [cellframe-tool-sign](https://gitlab.demlabs.net/cellframe/cellframe-tool-sign) project which has had JNI wrappers added so that it is functional with Android devices. You can see the modified code [here](https://github.com/the-whale-dev/cellframe-android-wallet-misc)
 
 ## Current Issues
-1) cellframe-tool-sign currently creates a different wallet to one created via the [Cellframe Dashboard](https://cellframe.net/download/) using the same seed phrase
+1) cellframe-tool-sign currently creates a different wallet to one created via the [Cellframe Dashboard](https://cellframe.net/download/) using the same seed phrase. You can still sign transactions and the .dwallet files are even compatible with eachother but the generation of the .dwallet file is different
 2) RPC nodes are still under development and are currently unstable. This isn't a major issue but you may struggle to create transactions for awhile and have to wait for the RPC nodes to become stable again
