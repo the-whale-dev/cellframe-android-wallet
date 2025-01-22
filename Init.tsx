@@ -1,5 +1,5 @@
 
-import { Animated, BackHandler, Button, Image, NativeModules, StatusBar, Text, TouchableOpacity, View } from 'react-native';
+import { Animated, BackHandler, Button, Dimensions, Image, NativeModules, StatusBar, Text, TouchableOpacity, View } from 'react-native';
 import { useEffect, useRef, useState } from "react";
 import { GestureHandlerRootView, TextInput } from "react-native-gesture-handler";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
@@ -171,7 +171,6 @@ function Init({ navigation }: Props): React.JSX.Element
         try
         {
             const res = await RNFS.exists("/data/data/com.thewallet/files/wallets");
-            console.log(`Does the wallet exist: ${res}`);
             if(res)
             {
                 const files = await RNFS.readDir("/data/data/com.thewallet/files/wallets");
@@ -181,7 +180,7 @@ function Init({ navigation }: Props): React.JSX.Element
                 {
                     try { const poop = a.ctime!.getTime() - b.ctime!.getTime(); return poop } catch(err: any) { console.log(err); return 0; } 
                 }).map((x) => x.name.split('.')[0]);
-                const initWallet = foundWallets[1];
+                const initWallet = foundWallets[0];
 
                 if(initWallet.startsWith("_"))
                 {
@@ -319,16 +318,19 @@ function Init({ navigation }: Props): React.JSX.Element
         });
     }
 
-    if(stage === "LOADING") return <View style={{ backgroundColor: Colors.darker, alignItems: 'center', justifyContent: 'center', height: '100%', width: '100%'}}><Text>LOADING</Text></View>
-    else if(stage === "UNLOCK") return (
-        <GestureHandlerRootView>
+    if(stage === "LOADING") return (
     <View style={{ backgroundColor: Colors.darker, alignItems: 'center', justifyContent: 'center', height: '100%', width: '100%'}}>
-        <TextInput placeholder='Password' onChangeText={(e) => setPassword(e)} style={{ width: '75%', backgroundColor: 'white', color: 'purple', textAlign: 'center' }} onSubmitEditing={attemptUnlock} placeholderTextColor={'grey'} />
-        <Text style={{color: 'red', fontSize: 18, fontWeight: '600'}}>{error}</Text>
-        <TouchableOpacity style={{ backgroundColor: 'purple', paddingVertical: 8, paddingHorizontal: 16, borderRadius: 8 }} onPress={attemptUnlock}>
-            <Text style={{ color: 'white', fontSize: 22, fontWeight: '800' }}>Unlock Wallet</Text>
-        </TouchableOpacity>
-    </View>
+        <Image source={AppIcon} style={{ height: Dimensions.get("screen").width/2, width: Dimensions.get("screen").width/2}} />
+    </View>);
+    else if(stage === "UNLOCK") return (
+    <GestureHandlerRootView>
+        <View style={{ backgroundColor: Colors.darker, alignItems: 'center', justifyContent: 'center', height: '100%', width: '100%'}}>
+            <TextInput placeholder='Password' onChangeText={(e) => setPassword(e)} style={{ width: '75%', backgroundColor: 'white', color: 'purple', textAlign: 'center' }} onSubmitEditing={attemptUnlock} placeholderTextColor={'grey'} />
+            <Text style={{color: 'red', fontSize: 18, fontWeight: '600'}}>{error}</Text>
+            <TouchableOpacity style={{ backgroundColor: 'purple', paddingVertical: 8, paddingHorizontal: 16, borderRadius: 8 }} onPress={attemptUnlock}>
+                <Text style={{ color: 'white', fontSize: 22, fontWeight: '800' }}>Unlock Wallet</Text>
+            </TouchableOpacity>
+        </View>
     </GestureHandlerRootView>
     );
     const res =

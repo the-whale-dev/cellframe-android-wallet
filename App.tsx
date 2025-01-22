@@ -8,12 +8,14 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type {PropsWithChildren} from 'react';
 import {
+  ActivityIndicator,
   Animated,
   BackHandler,
   Button,
   Dimensions,
   Image,
   Linking,
+  PanResponder,
   Platform,
   SafeAreaView,
   ScrollView,
@@ -39,7 +41,7 @@ import Clipboard from '@react-native-clipboard/clipboard';
 import axios, { AxiosError } from 'axios';
 import { GestureHandlerRootView, TextInput } from 'react-native-gesture-handler';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
-import { faArrowUpFromBracket, faGear, faGlobe, faLock, faTrash, faWallet } from '@fortawesome/free-solid-svg-icons';
+import { faArrowUpFromBracket, faGear, faGlobe, faLock, faMagnifyingGlass, faRefresh, faTrash, faWallet } from '@fortawesome/free-solid-svg-icons';
 import DropDownPicker from 'react-native-dropdown-picker';
 
 import Init, { RootStackParamList } from './Init';
@@ -52,6 +54,7 @@ interface CellNetwork
   name: string,
   id: string,
   ticker: string,
+  explorerID: string,
 }
 
 const CELL_Icon = require(`./assets/CELL.png`);
@@ -346,11 +349,77 @@ function App({ navigation, route }: Props): React.JSX.Element
   const [wallets, setWallets] = useState<string[]>(route.params.foundWallets);
   const walletRef = useRef<{ name: string, address: string }>({ name: route.params.initWallet, address: "" }); 
 
+  const [editWallet, setEditWallet] = useState<{ orgName: string, newName: string }>({ orgName: "", newName: ""});
   const [password, setPassword] = useState(route.params.initPassword);
 
   const [balances, setBalances] = useState<{ ticker: string, amount: number }[]>([]);
   const [balanceLoaded, setBalanceLoaded] = useState(false);
   const balancesRef = useRef<any[]>([]);
+
+  const [txnHistory, setTxnHistory] = useState<{ hash: string, type: "in" | "out" | "xchange", value: string, otherAddress?: string }[]>([]);
+  const [networks, setNetworks] = useState<CellNetwork[]>([{ name: "Backbone", id: "0x0404202200000000", ticker: "CELL", explorerID: "289391606459531264" }, { name: "KelVPN", id: "0x1807202300000000", ticker: "KEL", explorerID: "1731387916443189248" }]);
+
+  const getActiveNetwork = useMemo(() =>
+  {
+    const network = networks.find((x) => x.name === activeNetwork);
+    if(!network) throw new Error("ActiveNetwork doesn't apply to any actual networks");
+
+    return network;
+  }, [activeNetwork]);
+
+  const getTxnHistory = useCallback(async () =>
+  {
+    try
+    {
+      const network = getActiveNetwork;
+      const address = await CellframeToolSign.wrapWalletDetails(`/data/data/com.thewallet/files/wallets/${editWallet.orgName}.dwallet`, network.id, password);
+      const req = await axios.post(rpc === "" ? `http://rpc.cellframe.net/connect` : rpc,
+      {
+        method: "tx_history",
+        params: [`tx_history;-addr;${address};-net;${activeNetwork};-chain;main`],
+        id: "1"
+      });
+
+      //console.log(req.data.result[0][2]);
+      //console.log(req.data.result[0][2].data);
+      console.log(req.data.result);
+      console.log(req.data.result[0][2].hash);
+      const test =
+      {
+        hash: req.data.result[0][2].hash,
+        type: req.data.result[0][2].tx_type === "recv" ? "in" : "out",
+        value: req.data.result[0][2].recv_coins,
+        otherAddress: req.data.result[0][2].source_address
+      };
+
+      console.log(test);
+
+      setTxnHistory(
+      [
+        {
+          hash: req.data.result[0][2].hash,
+          type: req.data.result[0][2].tx_type === "recv" ? "in" : "out",
+          value: req.data.result[0][2].recv_coins,
+          otherAddress: req.data.result[0][2].source_address
+        }
+      ]);/*
+      setTxnHistory(req.data.result[0].map((x: any) =>
+      {
+        console.log(x);
+        console.log(x.data[2]);
+      return (
+      {
+        hash: x.data[2].hash,
+        type: x.data[2].tx_type === "recv" ? "in" : "out",
+        value: x.data[2].recv_coins,
+        otherAddress: x.data[2].source_address
+      });}));*/
+    }
+    catch(err: any)
+    {
+      console.error(err);
+    }
+  }, [editWallet.orgName, activeNetwork, getActiveNetwork]);
 
   // Allows access to debug functions
   // e.g. you can get the transaction JSON content and then execute it on a local cellframe node if the RPC fails
@@ -368,7 +437,6 @@ function App({ navigation, route }: Props): React.JSX.Element
 
   const [send, setSend] = useState<{address: string, amount: string}>({ address: "", amount: "" });
   const [stake, setStake] = useState<{ amount: number, time: { year: string, month: string, day: string, }}>({amount: 0, time: { year: "25", month: "12", day: "12" }});
-  const [networks, setNetworks] = useState<CellNetwork[]>([{ name: "Backbone", id: "0x0404202200000000", ticker: "CELL" }, { name: "KelVPN", id: "0x1807202300000000", ticker: "KEL" }]);
 
   const backgroundStyle = StyleSheet.create(
   {
@@ -392,6 +460,7 @@ function App({ navigation, route }: Props): React.JSX.Element
   }, [wallet.address]);
 
   const [fees, setFees] = useState<{network: string, validator: string}>({ network: '0', validator: '0.01' }); //0.0025 when enabled for network
+  const [rpc, setRPC] = useState("http://rpc.cellframe.net/connect");
   const [refreshRate, setRefreshRate] = useState(5);
 /*
   TEMPORARILY REMOVING BALANCE REFRESH UNTIL ISSUES RESOLVED
@@ -429,16 +498,28 @@ function App({ navigation, route }: Props): React.JSX.Element
     }
   }, [refreshRate, activeNetwork, wallet.address]);
 */
+
+  const isRefreshingRef = useRef(false);
   const updateBalances = useCallback(async () =>
   {
     try
     {
+      if(isRefreshingRef.current === true) return;
+      Animated.loop(
+      Animated.timing(rotateAnim,
+      {
+        toValue: 1,
+        duration: 800,
+        useNativeDriver: true
+      })).start();
+      isRefreshingRef.current = true;
+
       if(wallet.address === "") throw new Error("Can't get balance of nothing");
 
       console.log(`${wallet.address} on ${activeNetwork}`);
       setBalanceLoaded(false);
 
-      const res = await axios.post(`http://rpc.cellframe.net/connect`, 
+      const res = await axios.post(`${rpc === "" ? 'http://rpc.cellframe.net/connect' : rpc}`, 
       {
         method: "wallet",
         params: [`wallet;info;-addr;${wallet.address};-net;Backbone`],
@@ -469,6 +550,9 @@ function App({ navigation, route }: Props): React.JSX.Element
     finally
     {
       setBalanceLoaded(true);
+      rotateAnim.stopAnimation();
+      rotateAnim.setValue(0);
+      isRefreshingRef.current = false;
     }
   }, [wallet.address, activeNetwork, balances]);
 
@@ -541,7 +625,7 @@ function App({ navigation, route }: Props): React.JSX.Element
       const amount = 1*(10**18);
       const token = "CPUNK";
 
-      const maybe = await axios.post(`http://rpc.cellframe.net/connect`,
+      const maybe = await axios.post(`${rpc === "" ? 'http://rpc.cellframe.net/connect' : rpc}`,
       {
         method: "wallet",
         params: [`wallet;outputs;-addr;${wallet.address};-net;Backbone;-token;CELL`],
@@ -606,7 +690,7 @@ function App({ navigation, route }: Props): React.JSX.Element
       const signedJSON = await CellframeToolSign.wrapWalletSign(`/data/data/com.thewallet/files/wallets/${wallet.name}.dwallet`, password, json);
       console.log(signedJSON);
 
-      const remoteSignResult = await axios.post(`http://rpc.cellframe.net`, 
+      const remoteSignResult = await axios.post(`${rpc === "" ? 'http://rpc.cellframe.net/connect' : rpc}`, 
       {
         method: "tx_create_json",
         params: [`tx_create_json;-net;Backbone-chain;main;-json_str;${signedJSON}`],
@@ -695,7 +779,7 @@ function App({ navigation, route }: Props): React.JSX.Element
       const signedJSON = await CellframeToolSign.wrapWalletSign(`/data/data/com.thewallet/files/wallets/${wallet.name}.dwallet`, password, json);
       console.log(signedJSON);
 
-      const remoteSignatureRes = await axios.post(`http://rpc.cellframe.net/connect`, 
+      const remoteSignatureRes = await axios.post(`${rpc === "" ? 'http://rpc.cellframe.net/connect' : rpc}`, 
       {
         method: "tx_create_json",
         params: [`tx_create_json;-net;Backbone;-chain;main;-json_str;${signedJSON}`],
@@ -739,7 +823,7 @@ function App({ navigation, route }: Props): React.JSX.Element
         console.log(wallet.address);
         const params = `wallet;outputs;-addr;${wallet.address};-net;${activeNetwork};-token;${network.ticker.toUpperCase()}`;
         console.log(params);
-        const UTXOs = await axios.post(`http://rpc.cellframe.net/connect?360`,
+        const UTXOs = await axios.post(`${rpc === "" ? 'http://rpc.cellframe.net/connect' : rpc}`,
         {
           method: "wallet",
           params: [params],
@@ -784,8 +868,7 @@ function App({ navigation, route }: Props): React.JSX.Element
             {
               type: "out",
               addr: "Rj7J7MiX2bWy8sNyX38bB86KTFUnSn7sdKDsTFa2RJyQTDWFaebrj6BucT7Wa5CSq77zwRAwevbiKy1sv1RBGTonM83D3xPDwoyGasZ7",
-              value: (parseFloat(fees.network)*(10**18)).toString(),
-              token: network.ticker.toLowerCase()
+              value: (parseFloat(fees.network)*(10**18)).toString()
             } : undefined,
             leftover > 0 ?
             {
@@ -805,14 +888,14 @@ function App({ navigation, route }: Props): React.JSX.Element
       }
       else
       {
-        console.log("We are sending custom tokens i.e. $QEVM");
-        const nativeUTXOs = await axios.post(`http://rpc.cellframe.net/connect`,
+        console.log("We are sending custom tokens e.g. $QEVM");
+        const nativeUTXOs = await axios.post(`${rpc === "" ? 'http://rpc.cellframe.net/connect' : rpc}`,
         {
           method: "wallet",
           params: [`wallet;outputs;-addr;${wallet.address};-net;${activeNetwork};-token;${network.ticker.toUpperCase()}`],
           id: "1"
         });
-        const tokenUTXOs = await axios.post(`http://rpc.cellframe.net/connect`,
+        const tokenUTXOs = await axios.post(`${rpc === "" ? 'http://rpc.cellframe.net/connect' : rpc}`,
         {
           method: "wallet",
           params: [`wallet;outputs;-addr;${wallet.address};-net;${activeNetwork};-token;${dpValue!.toUpperCase()}`],
@@ -840,7 +923,7 @@ function App({ navigation, route }: Props): React.JSX.Element
         let n_leftover = usingNativeUTXOs.reduce((a, b) => a + b.value, 0) - (parseFloat(fees.network)*(10**18)) - (parseFloat(fees.validator)*(10**18));
         let t_leftover = usingTokenUTXOs.reduce((a, b) => a + b.value, 0) - amount;
 
-        const json = JSON.stringify(
+        json = JSON.stringify(
         {
           items:
           [
@@ -855,15 +938,17 @@ function App({ navigation, route }: Props): React.JSX.Element
             parseFloat(fees.network) > 0
             ?
             {
-              type: "out",
+              type: "out_ext",
               addr: "Rj7J7MiX2bWy8sNyX38bB86KTFUnSn7sdKDsTFa2RJyQTDWFaebrj6BucT7Wa5CSq77zwRAwevbiKy1sv1RBGTonM83D3xPDwoyGasZ7",
               value: (parseFloat(fees.network)*(10**18)).toString(),
+              token: network.ticker.toUpperCase()
             } : undefined,
             n_leftover > 0 ?
             {
-              type: "out",
+              type: "out_ext", 
               addr: wallet.address,
               value: n_leftover.toString(),
+              token: network.ticker.toUpperCase()
             } : undefined,
             t_leftover > 0 ?
             {
@@ -890,14 +975,15 @@ function App({ navigation, route }: Props): React.JSX.Element
       console.log(JSON.stringify(signedJSON));
 
       setTxnJSON(`${signedJSON}`);
-      const remoteSignatureRes = await axios.post(`http://rpc.cellframe.net/connect`, 
+      const remoteSignatureRes = await axios.post(`${rpc === "" ? 'http://rpc.cellframe.net/connect' : rpc}`, 
       {
         method: "tx_create_json",
-        params: [`tx_create_json;-net;Backbone;-chain;main;-json_str;${signedJSON}`],
+        params: [`tx_create_json;-net;Backbone;-chain;main;-tx_obj;${signedJSON}`],
         id: "1"
       });
 
       console.log(remoteSignatureRes.data);
+      console.log(remoteSignatureRes.data.result[0].errors);
       if(remoteSignatureRes.data.result[0] === undefined) throw new Error("Failed to sign message");
       setSendStatus(remoteSignatureRes.data.result[0].hash);
     }
@@ -1011,7 +1097,7 @@ function App({ navigation, route }: Props): React.JSX.Element
   }
 
   const [page, setPage] = useState<"SETTINGS" | "BALANCE" | "WEB">("BALANCE");
-  const [settingsTab, setSettingsTab] = useState<"INIT" | "NETWORKS" | "NETWORKS.MODIFY" | "WALLET" | "WALLET.MODIFY" | "TRANSACTION">("INIT");
+  const [settingsTab, setSettingsTab] = useState<"INIT" | "NETWORKS" | "NETWORKS.MODIFY" | "WALLET" | "WALLET.MODIFY" | "WALLET.MODIFY.HISTORY" | "TRANSACTION">("INIT");
 
   const [networkModifyValues, setNetworkModifyValues] = useState<{ name: string, id: string, ticker: string, networkIndex?: number | undefined }>(
   {
@@ -1019,6 +1105,120 @@ function App({ navigation, route }: Props): React.JSX.Element
     id: "",
     ticker: "",
   });
+
+  const [bridgeDetails, setBridgeDetails] = useState<{ network: "BEP20" | "ERC20", address: string }>({ network: "BEP20", address: "" });
+  /* Testing bridge transaction. Doesn't work */
+  const bridge = useCallback(async () =>
+  {
+    try
+    {
+      const amount = 10*(10**18);
+      const network = getActiveNetwork;
+
+      const params = `wallet;outputs;-addr;${wallet.address};-net;${activeNetwork};-token;${network.ticker.toUpperCase()}`;
+      console.log(params);
+
+      const UTXOs = await axios.post(`${rpc === "" ? 'http://rpc.cellframe.net/connect' : rpc}`,
+      {
+        method: "wallet",
+        params: [params],
+        id: "1"
+      });
+
+      console.log(UTXOs.data);
+      console.log(UTXOs.data.result);
+      let t_UTXOs = UTXOs.data.result[0][0].outs.map((x: any) => ({ type: "in", prev_hash: x.prev_hash, out_prev_idx: x.out_prev_idx, value: parseInt(x.value_datosi) })); //datosi is misspelt but they might fix later so maybe change to datoshi if issues arise
+      console.log(t_UTXOs);
+      console.log(`^^^^^^^^ These are the UTXOs ^^^^^^^^^^`);
+      let usingUTXOs: any[] = [];
+
+      for(let i = 0; i < t_UTXOs.length; i++)
+      {
+        if(usingUTXOs.reduce((a, b) => a + b.value, 0) >= (amount + (parseFloat(fees.network)*(10**18)) + (parseFloat(fees.validator)*(10**18)))) break;
+        usingUTXOs.push(t_UTXOs[i]);
+      }
+
+      console.log (`----------- Using UTXOs -----------`);
+      console.log(usingUTXOs);
+      console.log(`Using UTXOS ^^^^^^^^^^^`);
+
+      let total = usingUTXOs.reduce((a, b) => a + b.value, 0);
+      console.log(`Total: ${total}`);
+      let leftover = total - amount - (parseFloat(fees.network)*(10**18)) - (parseFloat(fees.validator)*(10**18));
+      console.log(`Leftover: ${leftover}`);
+
+      if(leftover < 0) throw new Error("You don't have enough funds to create this transaction");
+
+      let json = JSON.stringify(
+      {
+        items:
+        [
+          ...usingUTXOs.map((x) => ({ type: "in", prev_hash: x.prev_hash, out_prev_idx: x.out_prev_idx })),
+          {
+            type: "out",
+            addr: "null",
+            value: amount.toString()
+          },
+          leftover > 0
+          ?
+          {
+            type: "out",
+            addr: wallet.address,
+            value: leftover.toString()
+          } : undefined,
+          {
+            type: "out_cond",
+            ts_expires: "never",
+            value: (parseFloat(fees.validator)*(10**18)).toString(),
+            service_id: "0x0000000000000000",
+            subtype: "fee"
+          },
+          {
+            type: "data",
+            type_tsd: 9,
+            data: "BRIDGE"
+          },
+          {
+            type: "data",
+            type_tsd: 10,
+            data: "OUT"
+          },
+          {
+            type: "data",
+            type_tsd: 2,
+            data: bridgeDetails.address
+          },
+          {
+            type: "data",
+            type_tsd: 5,
+            data: bridgeDetails.network
+          }
+        ].filter((x) => x !== undefined)
+      });
+
+      const signedJSON = await CellframeToolSign.wrapWalletSign(`/data/data/com.thewallet/files/wallets/${wallet.name}.dwallet`, password, json);
+      console.log(signedJSON);
+      console.log(JSON.stringify(signedJSON));
+
+      setTxnJSON(`${signedJSON}`);
+      const remoteSignatureRes = await axios.post(`${rpc === "" ? 'http://rpc.cellframe.net/connect' : rpc}`, 
+      {
+        method: "tx_create_json",
+        params: [`tx_create_json;-net;Backbone;-chain;main;-tx_obj;${signedJSON}`],
+        id: "1"
+      });
+
+      console.log(remoteSignatureRes.data);
+      console.log(remoteSignatureRes.data.result);
+      console.log(remoteSignatureRes.data.result[0].errors);
+      if(remoteSignatureRes.data.result[0] === undefined) throw new Error("Failed to sign message");
+      setSendStatus(remoteSignatureRes.data.result[0].hash);
+    }
+    catch(err: any)
+    {
+      console.error(err);
+    }
+  }, [activeNetwork, wallet.address, wallet.name, password, bridgeDetails]);
 
   useEffect(() =>
   {
@@ -1065,12 +1265,18 @@ function App({ navigation, route }: Props): React.JSX.Element
   }, [page, settingsTab]);
 
   const [networkChooserOpen, setNetworkChooserOpen] = useState(false);
-  const [editWallet, setEditWallet] = useState<{ orgName: string, newName: string }>({ orgName: "", newName: ""});
   const [unlockWallet, setUnlockWallet] = useState<{ unlocking: string, password: string, error: string }>({ unlocking: "", password: "", error: "" });
   
   const [url, setURL] = useState<{ actual: string, typing: string }>({ actual: "https://stake.cellframe.net", typing: "" });
-
   const [sendStatus, setSendStatus] = useState("");
+
+  const rotateAnim = useRef(new Animated.Value(0)).current;
+
+  const rotation = rotateAnim.interpolate(
+  {
+    inputRange: [0, 1],
+    outputRange: ['0deg', '360deg']
+  });
 
   return (
     <GestureHandlerRootView>
@@ -1119,7 +1325,11 @@ function App({ navigation, route }: Props): React.JSX.Element
                 <Text style={{ fontWeight: '800', color: 'white', textAlign: 'center', fontSize: 18 }}>{x.name}</Text>
               </TouchableOpacity>)
             }
-              <TouchableOpacity style={{ width: '75%', backgroundColor: 'purple', paddingHorizontal: 18, paddingVertical: 9, borderRadius: 8 }} onPress={() => setSettingsTab("NETWORKS.MODIFY")}>
+              <TouchableOpacity style={{ width: '75%', backgroundColor: 'purple', paddingHorizontal: 18, paddingVertical: 9, borderRadius: 8 }} onPress={() => 
+              {
+                setNetworkModifyValues({ id: "", name: "", ticker: "" });
+                setSettingsTab("NETWORKS.MODIFY");
+              }}>
                 <Text style={{ fontWeight: '800', color: 'white', textAlign: 'center', fontSize: 18 }}>++ Add Network ++</Text>
               </TouchableOpacity>
             </View>
@@ -1145,10 +1355,10 @@ function App({ navigation, route }: Props): React.JSX.Element
                     if(networkModifyValues.networkIndex !== undefined)
                     {
                       let edited = prev;
-                      edited[networkModifyValues.networkIndex] = { ...networkModifyValues };
+                      edited[networkModifyValues.networkIndex] = { ...networkModifyValues, explorerID: prev[networkModifyValues.networkIndex].explorerID };
                       return edited;
                     }
-                    else return [...prev, { ...networkModifyValues }];
+                    else return [...prev, { ...networkModifyValues, explorerID: "" }];
                   });
                   setNetworkModifyValues({ id: "", name: "", ticker: "" });
                   setSettingsTab("NETWORKS");
@@ -1163,25 +1373,31 @@ function App({ navigation, route }: Props): React.JSX.Element
             :
             settingsTab === "TRANSACTION"
             ?
-            <View style={{ flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
-              <Text style={{ color: 'white', fontSize: 22, margin: 4, fontWeight: '800' }}>Network Fee</Text>
-              <TextInput keyboardType='numeric' style={{ backgroundColor: 'white', color: 'purple', width: '75%', textAlign: 'center', fontWeight: '600', borderRadius: 8 }} placeholderTextColor={'pink'} placeholder='Network Fee' value={fees.network} enabled={false} onChangeText={(e) => setFees((prev) => ({...prev, network: e }))} />
-              <Text style={{ color: 'white', fontSize: 22, margin: 4, fontWeight: '800' }}>Validator Fee</Text>
-              <TextInput keyboardType='numeric' style={{ backgroundColor: 'white', color: 'purple', width: '75%', textAlign: 'center', fontWeight: '600', borderRadius: 8 }} placeholderTextColor={'pink'} placeholder='Validator Fee' value={fees.validator} onChangeText={(e) => setFees((prev) => ({...prev, validator: e }))} />
-              <Text style={{ color: 'white', fontSize: 22, margin: 4, fontWeight: '800' }}>Enable Debug Mode</Text>
-              <TouchableOpacity style={{ position: 'relative', width: '32.5%', borderRadius: 60, height: 60, backgroundColor: 'white' }} onPress={() => setDebugMode((prev) => !prev)}>
-                <View style={{ position: 'absolute', borderRadius: 320, height: 60, width: 60, backgroundColor: debugMode ? 'purple' : 'grey', left: debugMode ? undefined : 0, right: debugMode ? 0 : undefined }} />
-              </TouchableOpacity>
-              <TouchableOpacity style={{ backgroundColor: 'purple', paddingHorizontal: 18, width: '75%', paddingVertical: 9, borderRadius: 8}} onPress={() => setFees(
-              {
-                network: '0.0025',
-                validator: '0.01'
-              })} >
-                <Text style={{ textAlign: 'center', color: 'white', fontSize: 18, fontWeight: '800' }}>Restore Defaults</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={{ backgroundColor: 'purple', paddingHorizontal: 18, width: '75%', paddingVertical: 9, borderRadius: 8, margin: 4 }} onPress={() => setSettingsTab("INIT")} >
-                <Text style={{ textAlign: 'center', color: 'white', fontSize: 18, fontWeight: '800' }}>Back</Text>
-              </TouchableOpacity>
+            <View style={{ flexDirection: 'column', alignItems: 'center', justifyContent: 'space-evenly', flex: 1 }}>
+              <View style={{ flexDirection: 'column', alignItems: 'center', justifyContent: 'space-around', width: '100%', height: '60%' }}>
+                <Text style={{ color: 'white', fontSize: 22, fontWeight: '800' }}>Network Fee</Text>
+                <TextInput keyboardType='numeric' style={{ backgroundColor: 'white', color: 'purple', width: '75%', textAlign: 'center', fontWeight: '600', borderRadius: 8 }} placeholderTextColor={'pink'} placeholder='Network Fee' value={fees.network} enabled={false} onChangeText={(e) => setFees((prev) => ({...prev, network: e }))} />
+                <Text style={{ color: 'white', fontSize: 22, fontWeight: '800' }}>Validator Fee</Text>
+                <TextInput keyboardType='numeric' style={{ backgroundColor: 'white', color: 'purple', width: '75%', textAlign: 'center', fontWeight: '600', borderRadius: 8 }} placeholderTextColor={'pink'} placeholder='Validator Fee' value={fees.validator} onChangeText={(e) => setFees((prev) => ({...prev, validator: e }))} />
+                <Text style={{ color: 'white', fontSize: 22, fontWeight: '800' }}>Custom RPC</Text>
+                <TextInput keyboardType='numeric' style={{ backgroundColor: 'white', color: 'purple', width: '75%', textAlign: 'center', fontWeight: '600', borderRadius: 8 }} placeholderTextColor={'pink'} placeholder='http://rpc.cellframe.net/connect' value={rpc} onChangeText={(e) => setRPC(e)} />
+                <Text style={{ color: 'white', fontSize: 22, fontWeight: '800' }}>Enable Debug Mode</Text>
+                <TouchableOpacity style={{ position: 'relative', width: '32.5%', borderRadius: 60, height: 60, backgroundColor: 'white' }} onPress={() => setDebugMode((prev) => !prev)}>
+                  <View style={{ position: 'absolute', borderRadius: 320, height: 60, width: 60, backgroundColor: debugMode ? 'purple' : 'grey', left: debugMode ? undefined : 0, right: debugMode ? 0 : undefined }} />
+                </TouchableOpacity>
+              </View>
+              <View style={{ flexDirection: 'column', alignItems: 'center', justifyContent: 'space-evenly', height: '20%' }}>
+                <TouchableOpacity style={{ backgroundColor: 'purple', paddingHorizontal: 18, width: '75%', paddingVertical: 9, borderRadius: 8}} onPress={() => setFees(
+                {
+                  network: '0.0025',
+                  validator: '0.01'
+                })} >
+                  <Text style={{ textAlign: 'center', color: 'white', fontSize: 18, fontWeight: '800' }}>Restore Defaults</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={{ backgroundColor: 'purple', paddingHorizontal: 18, width: '75%', paddingVertical: 9, borderRadius: 8 }} onPress={() => setSettingsTab("INIT")} >
+                  <Text style={{ textAlign: 'center', color: 'white', fontSize: 18, fontWeight: '800' }}>Back</Text>
+                </TouchableOpacity>
+              </View>
             </View>
             :
             settingsTab === "WALLET"
@@ -1256,6 +1472,9 @@ function App({ navigation, route }: Props): React.JSX.Element
                 <Text style={{ color: 'white', fontWeight: '800', fontSize: 32 }}>{editWallet.orgName.startsWith("_") ? editWallet.orgName.split("_")[1] : editWallet.orgName}</Text>
                 <TextInput style={{ backgroundColor: 'white', color: 'purple', width: '75%', marginVertical: 32 }} placeholderTextColor={'grey'} placeholder={editWallet.orgName} value={editWallet.newName} onChangeText={(e) => setEditWallet((prev) => ({ ...prev, newName: e.replace(/_/g, "") }))} />
               </View>
+              <TouchableOpacity activeOpacity={0.75} style={{backgroundColor: 'red', paddingHorizontal: 18, paddingVertical: 9, borderRadius: 32, width: '75%', marginBottom: 8 }} onPress={() => getTxnHistory().then(() => setSettingsTab("WALLET.MODIFY.HISTORY"))}>
+                <Text style={{color: 'white', fontSize: 22, fontWeight: '800', textAlign: 'center' }}>History</Text>
+              </TouchableOpacity>
               <TouchableOpacity activeOpacity={0.75} style={{backgroundColor: 'red', paddingHorizontal: 18, paddingVertical: 9, borderRadius: 32, width: '75%', marginBottom: 8 }} onPress={async () => 
               {
                 await RNFS.unlink(`/data/data/com.thewallet/files/wallets/${editWallet.orgName}.dwallet`);
@@ -1275,11 +1494,46 @@ function App({ navigation, route }: Props): React.JSX.Element
               <TouchableOpacity activeOpacity={0.75} style={{backgroundColor: 'purple', paddingHorizontal: 18, paddingVertical: 9, borderRadius: 32, width: '75%', marginBottom: 8 }} onPress={() => setSettingsTab("WALLET")}>
                 <Text style={{color: 'white', fontSize: 22, fontWeight: '800', textAlign: 'center' }}>Back</Text>
               </TouchableOpacity>
-            </View> : <></>
+            </View> 
+            : 
+            settingsTab === "WALLET.MODIFY.HISTORY"
+            ?
+            <View style={{ flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+              <Text style={{ color: 'white', fontWeight: '800', fontSize: 32 }}>{editWallet.orgName.startsWith("_") ? editWallet.orgName.split("_")[1] : editWallet.orgName}</Text>
+              <ScrollView style={{ flex: 1 }}>
+              {
+                txnHistory.map((x) => 
+                <View style={{ flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'center'}}>
+                  <TouchableOpacity style={{ flexDirection: 'row', width: '100%', alignItems: 'center', justifyContent: 'center' }} onPress={() => Linking.openURL(`https://explorer.cellframe.net/transaction/${activeNetwork}/${x.hash}`)}>
+                    <Text style={{ color: 'white' }}>{x.hash}</Text>
+                    {
+                      x.type === "in"
+                      ?
+                      <Text style={{ color: 'green' }}>{x.value}</Text>
+                      :
+                      <></>
+                    }
+                  </TouchableOpacity>
+                  {
+                    x.otherAddress
+                    ?
+                    <Text>from {x.otherAddress}</Text>
+                    :
+                    <></>
+                  }
+                </View>)
+              }
+              </ScrollView>
+              <TouchableOpacity activeOpacity={0.75} style={{backgroundColor: 'purple', paddingHorizontal: 18, paddingVertical: 9, borderRadius: 32, width: '75%', marginBottom: 8 }} onPress={() => setSettingsTab("WALLET.MODIFY")}>
+                <Text style={{color: 'white', fontSize: 22, fontWeight: '800', textAlign: 'center' }}>Back</Text>
+              </TouchableOpacity>
+            </View>
+            :<></>
+
           :
           page === "BALANCE"
           ?
-          <View style={{flexDirection: 'column', height: '100%'}}>
+          <View style={{flexDirection: 'column', height: '100%', alignItems: 'center', width: '100%'}}>
             <View style={{flexDirection: 'row', justifyContent: 'space-between'}}>
               <View style={{ flex: 1 }}>
                 <DropDownPicker
@@ -1287,7 +1541,7 @@ function App({ navigation, route }: Props): React.JSX.Element
                   ({
                     label: x.name,
                     value: x.name,
-                    icon: () => <Image source={CELL_Icon} />
+                    icon: () => <Image source={getIcon(x.ticker)} style={{ height: 32, width: 32 }} />
                   }))}
                   value={activeNetwork}
                   setValue={setActiveNetwork}
@@ -1324,27 +1578,84 @@ function App({ navigation, route }: Props): React.JSX.Element
             <View style={{alignItems: 'center', justifyContent: 'center', width: '100%', marginVertical: 8}}>
               <View style={{backgroundColor: 'purple', height: 1, width: '90%'}}></View>
             </View>
-            <Text style={{ textAlign: 'center', fontSize: 32, fontWeight: '800', color: 'white' }}>Balances</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', position: 'relative', marginBottom: 8, width: '100%' }}>
+              <Text style={{ textAlign: 'center', fontSize: 32, fontWeight: '800', color: 'white', width: 'auto' }}>Balances</Text>
+              <View style={{ position: 'absolute', right: 0, width: '25%', alignItems: 'flex-start' }}>
+                <Animated.View style={{ transform: [{ rotate: isRefreshingRef.current ? rotation : '0deg' }]}}>
+                  <TouchableOpacity onPress={updateBalances}>
+                    <FontAwesomeIcon icon={faRefresh} size={32} color='white' />
+                  </TouchableOpacity>
+                </Animated.View>
+              </View>
+            </View>
             {
               !balanceLoaded
               ?
-              <Text style={{ textAlign: 'center', fontSize: 32, fontWeight: '800', color: 'red' }}>LOading Balance</Text>
+              <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+                <Text style={{ textAlign: 'center', fontSize: 32, fontWeight: '800', color: 'purple' }}>Loading Balance</Text>
+              </View>
               :
               balances.length === 0
               ?
-              <View style={{flexDirection: 'row', alignItems: 'center', justifyContent: 'center', height: 'auto'}}>
-                <Image source={getIcon(networks.find((x) => x.name === activeNetwork)!.ticker)} style={{ height: 12, aspectRatio: '1/1', objectFit: 'contain', borderRadius: 320 }} />
-                <Text style={{color: 'white', fontSize: 24 }}>0</Text>
+              <View style={{flexDirection: 'row', alignItems: 'center', justifyContent: 'center', height: 'auto', borderColor: 'grey', borderTopWidth: 1, borderBottomWidth: 1, width: '90%' }}>
+                <Image source={getIcon(getActiveNetwork.ticker)} style={{ height: 48, width: 48, objectFit: 'contain', borderRadius: 320 }} />
+                <Text style={{color: 'white', fontSize: 24, textAlign: 'center' }}>0</Text>
               </View>
               :
-              balances.map((x) => x.amount === 0 ? null : <View key={x.ticker} style={{flexDirection: 'row', alignItems: 'center', justifyContent: 'center', height: 'auto'}}><Image source={getIcon(x.ticker)} style={{ height: 12, aspectRatio: '1/1', objectFit: 'contain', borderRadius: 320 }} /><Text style={{color: 'white', fontSize: 24 }}>{x.amount}</Text></View>)
+              balances.map((x, index) => x.amount === 0 ? null : 
+              <TouchableOpacity key={x.ticker} style={{ flexDirection: 'row', alignItems: 'center', height: 'auto', borderColor: 'grey', borderTopWidth: index === 0 ? 1 : 0, borderBottomWidth: 1, width: '90%' }} onPress={() => Linking.openURL(`https://1.api.explorer.cellframe.net/token_info/get_info/${getActiveNetwork.explorerID}/${x.ticker}`)}>
+                <View style={{ width: '25%', alignItems: 'flex-end' }}>
+                  <Image source={getIcon(x.ticker)} style={{ height: 48, width: 48, objectFit: 'scale-down', borderRadius: 320 }} />
+                </View>
+                <View style={{ width: '75%', alignItems: 'center' }}>
+                  <Text style={{color: 'white', fontSize: 24, textAlign: 'center' }}>{x.amount}</Text>
+                </View>
+              </TouchableOpacity>)
             }
           </View>
           :
           page === "WEB"
           ?
-          <View style={{width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center'}}>
-            <View style={{ width: '100%', height: '80%', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', backgroundColor: 'orange'}}>
+          <View style={{width: '100%', height: '100%', alignItems: 'center', justifyContent: 'flex-start'}}>
+            <View style={{flexDirection: 'row', justifyContent: 'space-between'}}>
+              <View style={{ flex: 1 }}>
+                <DropDownPicker
+                  items={networks.map((x) => 
+                  ({
+                    label: x.name,
+                    value: x.name,
+                    icon: () => <Image source={getIcon(x.ticker)} style={{ height: 32, width: 32 }} />
+                  }))}
+                  value={activeNetwork}
+                  setValue={setActiveNetwork}
+                  multiple={false}
+                  open={networkChooserOpen}
+                  setOpen={setNetworkChooserOpen}
+                  style={{ backgroundColor: 'transparent', borderColor: '#5A5A5A', borderRadius: 0, borderWidth: 0 }}
+                  arrowIconStyle={{ display: 'none' }}
+                  textStyle={{color: 'white', fontSize: 22 }}
+                  dropDownContainerStyle={{ backgroundColor: '#5A5A5A', paddingVertical: 4 }}
+                />
+              </View>
+              <View style={{flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center'}}>
+                <TouchableOpacity style={{flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center'}} onPress={() =>
+                  {
+                    if(isSendOpen) 
+                    {
+                      openSend();
+                      setSendStatus("");
+                      setTxnJSON("");
+                    }
+
+                    setSettingsTab("WALLET");
+                    setPage("SETTINGS");
+                  }}>
+                  <Text style={{fontSize: 22, color: 'white', marginRight: 8}}>{wallet.name.startsWith("_") ? wallet.name.split("_")[1] : wallet.name}</Text>
+                  <FontAwesomeIcon icon={faWallet} size={22} color={'white'} style={{marginRight: 8}} />
+                </TouchableOpacity>
+              </View>
+            </View>
+            <View style={{ width: '100%', height: '80%', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', backgroundColor: 'orange', marginTop: 32}}>
               <TextInput placeholder='https://www.cellframe.net' style={{ backgroundColor: 'white', color: 'purple', width: '100%', textAlign: 'center' }} placeholderTextColor={'grey'}
                 onChangeText={(e) => setURL((prev) => ({...prev, typing: e}))}
                 onSubmitEditing={() => setURL((prev) => ({ actual: prev.typing, typing: "" }))}
@@ -1468,6 +1779,7 @@ function App({ navigation, route }: Props): React.JSX.Element
           <View style={{ flexDirection: 'column', height: '100%'}}>
             <Text style={{ color: 'white', textAlign: 'center', fontSize: 22, fontWeight: '800'}}>Txn Created</Text>
             <Text style={{ color: 'white', fontWeight: '600' }} onPress={() => Clipboard.setString(sendStatus)}>{sendStatus}</Text>
+            <Text style={{ color: 'white' }}>Transaction may take some time to show on Explorer site</Text>
             <View style={{ flex: 1 }} />
             {
               debugMode
@@ -1486,6 +1798,7 @@ function App({ navigation, route }: Props): React.JSX.Element
               openSend();
               setSendStatus("");
               setTxnJSON("");
+              updateBalances();
             }}>
               <Text style={{ textAlign: 'center', fontWeight: '800', fontSize: 22, color: 'purple', paddingVertical: 8 }}>Close</Text>
             </TouchableOpacity>                

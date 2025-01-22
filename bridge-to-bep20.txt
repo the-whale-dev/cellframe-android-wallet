@@ -1,0 +1,48 @@
+{ = %7B
+} = %7D
+
+json=
+{
+	"net":"Backbone",
+	"chain":"main",
+	"items":[
+	{
+		"type":"in",
+		"addr_from":"Rj7J7MiX2bWy8sNyXXD8tViFVReDcr4DcR693DoBQxxiUnuTB6oAwFPWrw3DbQav1iidUpackgWAFrxSqegd1okkeBpacasQ4MaBr8AX",
+		"token":"CELL"
+	},
+	{
+		"type":"out",
+		"addr":"null",
+		"value":"100000000000000000000"
+	},
+	{
+		"type":"sign",
+		"wallet":"Staking"
+	},
+	{
+		"type":"out_cond",
+		"subtype":"fee",
+		"value":"50000000000000000"
+	},
+	{
+		"type":"data",
+		"type_tsd":9,
+		"data":"BRIDGE"
+	},
+	{
+		"type":"data",
+		"type_tsd":10,
+		"data":"OUT"
+	},
+	{
+		"type":"data",
+		"type_tsd":2,
+		"data":"0xF3b7a2B605DA5e665e086b6bfdEC1E3F0750B8D6"
+	},
+	{
+		"type":"data",
+		"type_tsd":5,
+		"data":"BEP20"
+	}]
+}

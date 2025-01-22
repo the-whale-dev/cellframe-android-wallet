@@ -1,0 +1,59 @@
+status: ACCEPTED
+    atom_hash: 0x03E4C95B31C6C39E0FD1F15A02E8A8C616AC1632D69FB18368DEE6D7B4EAB20E
+    hash: 0x533CFBBBB4951F916C9B80B9E0ED418AF116152617943C9C0BB6D99A6F07F976
+    ret_code: 0
+    ret_code_str: No error
+    action: regular
+    batching: false
+    first transaction: 
+    tx created: Wed, 22 Jan 2025 00:42:40 +1000
+    token ticker: CPUNK
+    ITEMS: 
+        
+            item type: IN
+            Tx prev hash: 0xDA2E2647C51355FC37D91B6AEC2931105600C8D3553D68B946EC00DB9F2714EC
+            Tx out prev idx: 0
+
+        
+            item type: IN
+            Tx prev hash: 0x14F1DD4F1A91CC07A298BB5CBB8765856B0C1A8BA2B83712C37A3DDBFAC1BA8A
+            Tx out prev idx: 1
+
+        
+            item type: OUT EXT
+            Addr: Rj7J7MiX2bWy8sNyX81nDJb2TSMUXMpQdPeTdHGPZ7ZKoKyYkUdDpoWEin3TwcZoKLtLyY6hjkCPTqgps76KJDYQSiN8bHP4reeoH2fA
+            Token: CPUNK
+            Coins: 300.0
+            Value: 300000000000000000000
+
+        
+            item type: OUT EXT
+            Addr: Rj7J7MiX2bWy8sNyXXD8tViFVReDcr4DcR693DoBQxxiUnuTB6oAwFPWrw3DbQav1iidUpackgWAFrxSqegd1okkeBpacasQ4MaBr8AX
+            Token: CPUNK
+            Coins: 3999700.0
+            Value: 3999700000000000000000000
+
+        
+            item type: OUT COND
+            ts_expires: never
+            coins: 0.05
+            value: 50000000000000000
+            subtype: DAP_CHAIN_TX_OUT_COND_SUBTYPE_FEE
+            uid: 0x0000000000000000
+            tsd_size: 0
+
+        
+            item type: OUT EXT
+            Addr: Rj7J7MiX2bWy8sNyXXD8tViFVReDcr4DcR693DoBQxxiUnuTB6oAwFPWrw3DbQav1iidUpackgWAFrxSqegd1okkeBpacasQ4MaBr8AX
+            Token: CELL
+            Coins: 10.333161152689153432
+            Value: 10333161152689153432
+
+        
+            item type: SIG
+            Signature: 
+            Type: sig_dil
+            Public key hash: 0x2F013343828CF36916FCB040696369D1D7C23DEF8F1839213F04A2CBA3B316D7
+            Public key size: 1196
+            Signature size: 2096
+            Sender addr: Rj7J7MiX2bWy8sNyXXD8tViFVReDcr4DcR693DoBQxxiUnuTB6oAwFPWrw3DbQav1iidUpackgWAFrxSqegd1okkeBpacasQ4MaBr8AX
