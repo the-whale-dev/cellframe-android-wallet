@@ -25,7 +25,7 @@ This project is a WIP and is most likely not suitable for casual use. There are 
 10) Clone the project
 11) If running a physical device make sure it's plugged in and USB terthering is enabled. You may need to enable developer tools on your phone which you can find out how to do for your device online
 12) Run "npm run start" in the parent folder
-13) Press "a" to open up the Android
+13) Press "a" to open the app on Android
 
 ## Building App Instance
 
