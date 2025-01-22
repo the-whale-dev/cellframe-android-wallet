@@ -5,6 +5,10 @@ This project is a WIP and while the app does function correctly at most times it
 ## App Layout
 <p align="center">
    <img src="https://github.com/the-whale-dev/cellframe-android-wallet-imgs/blob/main/Screenshot_20250122_222523_Quantum%20Wallet.jpg" alt="Init page of the wallet" width="200" />
+   <img src="https://github.com/the-whale-dev/cellframe-android-wallet-imgs/blob/main/Screenshot_20250122_222843_Quantum%20Wallet.jpg" alt="Init page of the wallet" width="200" />
+   <img src="https://github.com/the-whale-dev/cellframe-android-wallet-imgs/blob/main/Screenshot_20250122_222523_Quantum%20Wallet.jpg" alt="Init page of the wallet" width="200" />
+   <img src="https://github.com/the-whale-dev/cellframe-android-wallet-imgs/blob/main/Screenshot_20250122_222523_Quantum%20Wallet.jpg" alt="Init page of the wallet" width="200" />
+   <img src="https://github.com/the-whale-dev/cellframe-android-wallet-imgs/blob/main/Screenshot_20250122_222523_Quantum%20Wallet.jpg" alt="Init page of the wallet" width="200" />
 </p>
 
 ## Getting Started
