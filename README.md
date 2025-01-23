@@ -68,4 +68,4 @@ This project uses a modified version of the demlabs [cellframe-tool-sign](https:
 ## Current Issues
 1) cellframe-tool-sign currently creates a different wallet to one created via the [Cellframe Dashboard](https://cellframe.net/download/) using the same seed phrase. You can still sign transactions and the .dwallet files are even compatible with eachother but the generation of the .dwallet file is different
 2) RPC nodes are under development and can sometimes become unstable. This isn't a major issue but there could be temporary issues creating transactions whilst you wait for the RPC nodes to become stable again
-3) There are only RPC nodes for the Backbone network at the moment. While you can send tokens to your KelVPN address it is not recommended as you may not be able to move them for some time
+3) Not all of the RPC nodes support networks other than the Backbone network. While you can send tokens to your KelVPN address and even create transactions if relaying with a KelVPN RPC node you may struggle to create pass a signed transaction to the network
